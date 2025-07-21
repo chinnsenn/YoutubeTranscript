@@ -53,17 +53,32 @@ class TranscriptService:
                 subtitles = info.get('subtitles', {})
                 auto_subtitles = info.get('automatic_captions', {})
                 
+                # Log available languages for debugging
+                self.logger.info(f"Available manual subtitles: {list(subtitles.keys())}")
+                self.logger.info(f"Available auto captions: {list(auto_subtitles.keys())}")
+                
                 # Try to get subtitles in the specified language
                 subtitle_data = subtitles.get(language) or auto_subtitles.get(language)
+                
+                # If Chinese language not found, try common Chinese language code variations
+                if not subtitle_data and language in ['zh-CN', 'zh-Hans', 'zh-cn']:
+                    chinese_codes = ['zh-Hans', 'zh-CN', 'zh-cn', 'zh', 'chi', 'cmn']
+                    for code in chinese_codes:
+                        subtitle_data = subtitles.get(code) or auto_subtitles.get(code)
+                        if subtitle_data:
+                            language = code
+                            self.logger.info(f"Found Chinese subtitles with code: {code}")
+                            break
                 
                 if not subtitle_data:
                     # Try English as fallback
                     subtitle_data = subtitles.get('en') or auto_subtitles.get('en')
                     if subtitle_data:
                         language = 'en'
+                        self.logger.info("Using English subtitles as fallback")
                 
                 if not subtitle_data:
-                    raise Exception(f"No transcripts available for language: {language}")
+                    raise Exception(f"No transcripts available for language: {language}. Available languages: {list(set(list(subtitles.keys()) + list(auto_subtitles.keys())))}")
                 
                 # Get the subtitle URL (prefer vtt format)
                 subtitle_url = None
