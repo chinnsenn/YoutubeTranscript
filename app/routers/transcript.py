@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Query, Path
 from typing import Optional
 import re
-from app.models import TranscriptResponse, TranscriptRequest, ErrorResponse
+from app.models import TranscriptResponse, TranscriptRequest, ErrorResponse, BackendStatusResponse
 from app.services.transcript_service import transcript_service
 from app.services.cache_service import cache_service
 import logging
@@ -14,11 +14,19 @@ logger = logging.getLogger(__name__)
 async def health_check():
     """Health check endpoint"""
     cache_stats = await cache_service.get_cache_stats()
+    backend_status = transcript_service.get_backend_status()
     return {
         "status": "healthy",
         "service": "YouTube Transcript API",
-        "cache": cache_stats
+        "cache": cache_stats,
+        "backends": backend_status
     }
+
+
+@router.get("/backends", response_model=BackendStatusResponse)
+async def get_backend_status():
+    """Get status of all transcript backends"""
+    return transcript_service.get_backend_status()
 
 
 @router.get("/cache/stats")
@@ -37,7 +45,8 @@ async def clear_cache():
 @router.get("/{video_id}", response_model=TranscriptResponse)
 async def get_transcript_by_id(
     video_id: str = Path(..., description="YouTube video ID"),
-    language: str = Query("en", description="Language code (e.g., en, es, fr)")
+    language: str = Query("en", description="Language code (e.g., en, es, fr, zh-CN)"),
+    backend: Optional[str] = Query(None, description="Backend preference: youtube_transcript_api or yt_dlp")
 ):
     """Get transcript by YouTube video ID"""
     
@@ -51,10 +60,11 @@ async def get_transcript_by_id(
         if cached_transcript:
             return cached_transcript
         
-        # Get transcript from YouTube
+        # Get transcript from YouTube with backend preference
         transcript = await transcript_service.get_transcript(
             video_id=video_id, 
-            language=language
+            language=language,
+            backend=backend
         )
         
         # Cache the result
@@ -72,7 +82,8 @@ async def get_transcript_by_id(
 @router.get("/", response_model=TranscriptResponse)
 async def get_transcript_by_url(
     url: str = Query(..., description="YouTube video URL"),
-    language: str = Query("en", description="Language code (e.g., en, es, fr)")
+    language: str = Query("en", description="Language code (e.g., en, es, fr, zh-CN)"),
+    backend: Optional[str] = Query(None, description="Backend preference: youtube_transcript_api or yt_dlp")
 ):
     """Get transcript by YouTube video URL"""
     
@@ -85,10 +96,11 @@ async def get_transcript_by_url(
         if cached_transcript:
             return cached_transcript
         
-        # Get transcript from YouTube
+        # Get transcript from YouTube with backend preference
         transcript = await transcript_service.get_transcript(
             url=url, 
-            language=language
+            language=language,
+            backend=backend
         )
         
         # Cache the result
@@ -120,11 +132,12 @@ async def get_transcript_post(request: TranscriptRequest):
         if cached_transcript:
             return cached_transcript
         
-        # Get transcript from YouTube
+        # Get transcript from YouTube with backend preference
         transcript = await transcript_service.get_transcript(
             video_id=video_id,
             url=str(request.url) if request.url else None,
-            language=request.language
+            language=request.language,
+            backend=request.backend
         )
         
         # Cache the result
@@ -137,6 +150,28 @@ async def get_transcript_post(request: TranscriptRequest):
     except Exception as e:
         logger.error(f"Error getting transcript: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to get transcript: {str(e)}")
+
+
+@router.get("/{video_id}/languages")
+async def get_available_languages(
+    video_id: str = Path(..., description="YouTube video ID"),
+    backend: Optional[str] = Query(None, description="Backend preference: youtube_transcript_api or yt_dlp")
+):
+    """Get available languages for a video"""
+    
+    if not re.match(r'^[a-zA-Z0-9_-]{11}$', video_id):
+        raise HTTPException(status_code=400, detail="Invalid YouTube video ID format")
+    
+    try:
+        languages = await transcript_service.get_available_languages(video_id, backend)
+        return {
+            "video_id": video_id,
+            "available_languages": languages,
+            "count": len(languages)
+        }
+    except Exception as e:
+        logger.error(f"Error getting available languages for {video_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get available languages: {str(e)}")
 
 
 @router.delete("/{video_id}/cache")
