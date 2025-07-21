@@ -123,6 +123,40 @@ docker build -t youtube-transcript-api .
 docker-compose down
 ```
 
+## Language Support
+
+The API supports multiple languages for transcript extraction:
+
+- **Chinese**: Supports `zh-CN`, `zh-Hans`, `zh-Hant`, and other Chinese language codes
+- **English**: `en` (default)
+- **Other languages**: Any language code supported by YouTube's subtitle system
+
+When requesting Chinese subtitles with `zh-CN`, the system will automatically detect and use the appropriate Chinese language variant available for the video.
+
 ## License
 
-[Add your license information here]
+This project is licensed under the MIT License - see the details below:
+
+```
+MIT License
+
+Copyright (c) 2025 YouTube Transcript API
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
